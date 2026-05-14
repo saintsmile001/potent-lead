@@ -6,8 +6,14 @@ export const useUserStore = defineStore('user', {
     subscriptionTier: 'free',
     creditBalance: 0,
     user: { name: '', email: '' },
-    isLoading: false
+    isLoading: false,
+    _subscription: null
   }),
+
+  getters: {
+    hasMinimumCredits: (state) => state.creditBalance >= 20,
+    isPro: (state) => state.subscriptionTier === 'pro' || state.subscriptionTier === 'agency' || state.subscriptionTier === 'enterprise'
+  },
 
   actions: {
     // Fetch credit balance and profile from Supabase (source of truth)
@@ -37,6 +43,29 @@ export const useUserStore = defineStore('user', {
       } finally {
         this.isLoading = false
       }
+    },
+
+    // Real-time Credit Syncing
+    subscribeToProfile(userId) {
+      if (!userId) return
+
+      // Clean up previous subscription if exists
+      if (this._subscription) {
+        supabase.removeChannel(this._subscription)
+      }
+
+      this._subscription = supabase
+        .channel('profile-changes')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+          (payload) => {
+            console.log('Real-time balance update:', payload.new.credit_balance)
+            this.creditBalance = payload.new.credit_balance ?? this.creditBalance
+            this.subscriptionTier = payload.new.subscription_tier ?? this.subscriptionTier
+          }
+        )
+        .subscribe()
     },
 
     // Update profile info in Supabase
@@ -82,7 +111,8 @@ export const useUserStore = defineStore('user', {
         if (error) throw error
 
         if (data === true) {
-          this.creditBalance = Math.max(0, this.creditBalance - amount)
+          // PRO MOVE: Refresh from DB to ensure local state matches the atomic server state
+          await this.refreshCredits(userId)
           return true
         }
         return false // Insufficient credits
@@ -112,6 +142,11 @@ export const useUserStore = defineStore('user', {
         console.error('Failed to add credits:', err)
         return false
       }
+    },
+
+    // Refund credits if a search fails to initialize
+    async refundCredits(userId, amount) {
+      return await this.addCredits(userId, amount)
     },
 
     // Refresh just the credit balance (lightweight)

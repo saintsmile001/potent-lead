@@ -1,12 +1,12 @@
 <template>
-  <div class="p-8 max-w-4xl mx-auto w-full h-full">
-    <h1 class="text-4xl font-black mb-2 text-zinc-900 dark:text-white">Settings</h1>
-    <p class="text-zinc-500 dark:text-zinc-400 mb-10">Manage your account, preferences, and billing.</p>
+  <div class="p-4 md:p-8 max-w-4xl mx-auto w-full h-full">
+    <h1 class="text-3xl md:text-4xl font-black mb-2 text-zinc-900 dark:text-white">Settings</h1>
+    <p class="text-sm md:text-base text-zinc-500 dark:text-zinc-400 mb-10">Manage your account, preferences, and billing.</p>
 
     <div class="space-y-8">
       
       <!-- Profile Settings -->
-      <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-sm">
+      <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm">
         <h2 class="text-2xl font-bold mb-6 text-zinc-900 dark:text-white flex items-center gap-2">
           <User class="w-6 h-6 text-electric-blue" />
           Profile Information
@@ -32,7 +32,7 @@
           <button 
             @click="saveProfile"
             :disabled="isSaving"
-            class="px-6 py-3 bg-electric-blue hover:bg-blue-600 disabled:bg-zinc-400 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all cursor-pointer flex items-center gap-2"
+            class="w-full md:w-auto justify-center px-6 py-3 bg-electric-blue hover:bg-blue-600 disabled:bg-zinc-400 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all cursor-pointer flex items-center gap-2"
           >
             <span v-if="isSaving" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ isSaving ? 'Saving...' : (saveSuccess ? 'Saved!' : 'Save Changes') }}
@@ -41,7 +41,7 @@
       </section>
 
       <!-- App Preferences (Dark/Light Mode) -->
-      <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-sm">
+      <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm">
         <h2 class="text-2xl font-bold mb-6 text-zinc-900 dark:text-white flex items-center gap-2">
           <Sliders class="w-6 h-6 text-cyber-lime" />
           App Preferences
@@ -69,7 +69,7 @@
       </section>
 
       <!-- Billing & Credits -->
-      <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-sm">
+      <section class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm">
         <h2 class="text-2xl font-bold mb-6 text-zinc-900 dark:text-white flex items-center gap-2">
           <CreditCard class="w-6 h-6 text-electric-blue" />
           Billing & Usage

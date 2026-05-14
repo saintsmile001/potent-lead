@@ -223,8 +223,8 @@
               <span class="text-sm text-electric-blue dark:text-cyber-lime font-medium">Includes {{ Number(leadCount).toLocaleString() }} Verifications</span>
             </div>
             <div class="text-left md:text-right">
-              <span class="block text-4xl md:text-5xl font-black text-electric-blue">${{ totalPrice }}</span>
-              <span class="text-sm text-zinc-500 font-medium">at ${{ pricePerLead.toFixed(2) }}/lead</span>
+              <span class="block text-4xl md:text-5xl font-black text-electric-blue">{{ formatPrice(totalPrice, pricingStore.currency) }}</span>
+              <span class="text-sm text-zinc-500 font-medium">at {{ formatPrice(pricePerLead, pricingStore.currency) }}/lead</span>
             </div>
           </div>
         </div>
@@ -239,6 +239,12 @@
             <Lock v-else class="w-5 h-5" />
             Live Deep Scrape <span v-if="!hasDeepScrape" class="text-xs ml-1 font-normal">(Unlocks at 2k)</span>
           </div>
+        </div>
+
+        <!-- Bank Transfer Note (Nigeria) -->
+        <div v-if="pricingStore.isNigeria" class="p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-xl mb-6 text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+          <ShieldCheck class="w-4 h-4 flex-shrink-0" />
+          Pay via Card, Bank Transfer, or USSD — powered by Paystack.
         </div>
 
         <router-link :to="isLoggedIn ? '/search' : '/auth?mode=signup'" class="w-full py-4 bg-electric-blue hover:bg-blue-600 text-white rounded-2xl font-bold text-lg transition-all shadow-[0_0_20px_rgba(0,112,243,0.3)] hover:shadow-[0_0_30px_rgba(0,112,243,0.5)] flex items-center justify-center gap-2 cursor-pointer">
@@ -266,6 +272,7 @@ import { useTheme } from '../composables/useTheme'
 import { usePricingStore } from '../stores/pricing'
 import { useAuthStore } from '../stores/authStore'
 import { useRouter } from 'vue-router'
+import { formatPrice, getCustomPricePerLead } from '../utils/format'
 
 const { isDark, toggleTheme } = useTheme()
 const pricingStore = usePricingStore()
@@ -315,14 +322,10 @@ const notifications = [
 const leadCount = ref(100)
 
 const pricePerLead = computed(() => {
-  const isTierA = pricingStore.tier === 'A'
-  
-  if (leadCount.value < 500) return isTierA ? 0.10 : 0.25
-  if (leadCount.value < 2000) return isTierA ? 0.08 : 0.15
-  return isTierA ? 0.05 : 0.10
+  return getCustomPricePerLead(pricingStore.currency, leadCount.value)
 })
 
-const totalPrice = computed(() => (leadCount.value * pricePerLead.value).toFixed(2))
+const totalPrice = computed(() => leadCount.value * pricePerLead.value)
 
 const savingsAmount = computed(() => {
   if (leadCount.value >= 2000) return 'Save 40%'

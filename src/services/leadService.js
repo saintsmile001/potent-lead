@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const N8N_WEBHOOK_URL = 'https://potentra.app.n8n.cloud/webhook-test/potent-lead';
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_URL;
 
 /**
  * Trigger lead generation via n8n webhook.

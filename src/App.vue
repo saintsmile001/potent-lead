@@ -17,34 +17,32 @@
       </div>
     </div>
 
-    <!-- Top Up Modal (UI Only) -->
+    <!-- Top Up Modal -->
     <transition name="fade">
-      <div v-if="showTopUp" class="absolute inset-0 z-[60] bg-zinc-900/40 dark:bg-zinc-950/90 backdrop-blur-md flex items-center justify-center p-6">
-        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 max-w-lg w-full relative shadow-2xl transition-colors duration-300">
+      <div v-if="showTopUp" class="absolute inset-0 z-[60] bg-zinc-900/40 dark:bg-zinc-950/90 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full relative shadow-2xl transition-colors duration-300 max-h-[90vh] overflow-y-auto">
           <button @click="showTopUp = false" class="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer">
             <X class="w-6 h-6" />
           </button>
           <h2 class="text-2xl font-bold mb-2 text-zinc-900 dark:text-white">Add Credits</h2>
-          <p class="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">Select your package. You are on the <strong class="text-electric-blue dark:text-cyber-lime">{{ pricingStore.tier === 'A' ? 'Local' : 'Global' }}</strong> pricing tier.</p>
+          <p class="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">Select a package. Payments via <strong class="text-electric-blue dark:text-cyber-lime">{{ pricingStore.paymentProvider }}</strong>.</p>
           
-          <div class="space-y-4 mb-6">
-            <button @click="simulatePayment(1000)" class="w-full flex justify-between items-center p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-electric-blue/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group cursor-pointer">
-              <span class="font-bold text-lg text-zinc-900 dark:text-white group-hover:text-electric-blue transition-colors">1,000 Leads</span>
-              <span class="font-bold text-electric-blue dark:text-cyber-lime">{{ pricingStore.currency }}{{ pricingStore.tier === 'A' ? '80' : '150' }}</span>
-            </button>
-            <button @click="simulatePayment(5000)" class="w-full flex justify-between items-center p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-electric-blue/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group relative overflow-hidden cursor-pointer">
-              <div class="absolute inset-0 bg-electric-blue/5 dark:bg-electric-blue/5 group-hover:bg-electric-blue/10 transition-colors"></div>
-              <span class="font-bold text-lg text-zinc-900 dark:text-white group-hover:text-electric-blue transition-colors relative z-10">5,000 Leads <span class="text-xs bg-electric-blue/10 dark:bg-electric-blue/20 text-electric-blue px-2 py-1 rounded-full ml-2">Popular</span></span>
-              <span class="font-bold text-electric-blue dark:text-cyber-lime relative z-10">{{ pricingStore.currency }}{{ pricingStore.tier === 'A' ? '250' : '500' }}</span>
-            </button>
-            <button @click="simulatePayment(10000)" class="w-full flex justify-between items-center p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-electric-blue/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group cursor-pointer">
-              <span class="font-bold text-lg text-zinc-900 dark:text-white group-hover:text-electric-blue transition-colors">10,000 Leads</span>
-              <span class="font-bold text-electric-blue dark:text-cyber-lime">{{ pricingStore.currency }}{{ pricingStore.tier === 'A' ? '500' : '1000' }}</span>
+          <!-- Plans -->
+          <div class="space-y-3 mb-6">
+            <button v-for="plan in activePlans" :key="plan.leads" @click="simulatePayment(plan.leads)"
+              class="w-full flex justify-between items-center p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-electric-blue/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group cursor-pointer relative overflow-hidden">
+              <div class="relative z-10">
+                <span class="font-bold text-lg text-zinc-900 dark:text-white group-hover:text-electric-blue transition-colors">
+                  {{ plan.leads.toLocaleString() }} Leads
+                </span>
+                <span v-if="plan.popular || plan.bestValue" class="text-xs bg-electric-blue/10 dark:bg-electric-blue/20 text-electric-blue px-2 py-0.5 rounded-full ml-2">{{ plan.popular ? 'Popular' : 'Best Value' }}</span>
+              </div>
+              <span class="font-bold text-electric-blue dark:text-cyber-lime relative z-10">{{ pricingStore.currencySymbol }}{{ plan.price.toLocaleString() }}</span>
             </button>
           </div>
 
           <!-- Custom Amount -->
-          <div class="mb-8 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950/50">
+          <div class="mb-6 p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950/50">
             <label class="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Custom Amount (Leads)</label>
             <div class="flex gap-4 items-center">
               <input 
@@ -54,16 +52,16 @@
                 min="1"
                 class="flex-1 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-zinc-900 dark:text-white focus:border-electric-blue focus:outline-none transition-colors"
               >
-              <div class="text-right w-24">
-                <span class="block font-bold text-electric-blue text-lg">{{ pricingStore.currency }}{{ customPrice.toFixed(2) }}</span>
+              <div class="text-right w-28">
+                <span class="block font-bold text-electric-blue text-lg">{{ formatPrice(customPrice, pricingStore.currency) }}</span>
               </div>
             </div>
             <div class="flex justify-between items-center mt-4">
-              <p v-if="customPrice > 0 && customPrice < 5" class="text-red-500 text-xs font-medium">Minimum purchase is {{ pricingStore.currency }}5.00</p>
+              <p v-if="customPrice > 0 && customPrice < minPurchase" class="text-red-500 text-xs font-medium">Minimum: {{ formatPrice(minPurchase, pricingStore.currency) }}</p>
               <p v-else class="text-zinc-400 text-xs"></p>
               <button 
                 @click="simulatePayment(customLeads)" 
-                :disabled="!customLeads || customPrice < 5"
+                :disabled="!customLeads || customPrice < minPurchase"
                 class="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow-sm cursor-pointer"
               >
                 Buy
@@ -71,9 +69,15 @@
             </div>
           </div>
 
+          <!-- Bank Transfer Note (Nigeria only) -->
+          <div v-if="pricingStore.isNigeria" class="p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-xl mb-4 text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+            <ShieldCheck class="w-4 h-4 flex-shrink-0" />
+            Bank Transfer & USSD also available at checkout.
+          </div>
+
           <div class="text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
             <ShieldCheck class="w-4 h-4" />
-            Secured by <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ pricingStore.tier === 'A' ? 'Paystack' : 'Stripe' }}</span>
+            Secured by <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ pricingStore.paymentProvider }}</span>
           </div>
         </div>
       </div>
@@ -215,6 +219,8 @@ import { useUserStore } from './stores/user'
 import { useAuthStore } from './stores/authStore'
 import { useTheme } from './composables/useTheme'
 import { useRouter } from 'vue-router'
+import { formatPrice, getCustomPricePerLead } from './utils/format'
+import { initializePaystack } from './services/paystack'
 
 const pricingStore = usePricingStore()
 const userStore = useUserStore()
@@ -227,16 +233,12 @@ const customLeads = ref(null)
 
 const customPrice = computed(() => {
   if (!customLeads.value || customLeads.value <= 0) return 0
-  const isTierA = pricingStore.tier === 'A'
-  const leads = customLeads.value
-  let pricePerLead = 0
-  
-  if (leads < 500) pricePerLead = isTierA ? 0.10 : 0.25
-  else if (leads < 2000) pricePerLead = isTierA ? 0.08 : 0.15
-  else pricePerLead = isTierA ? 0.05 : 0.10
-  
-  return leads * pricePerLead
+  const perLead = getCustomPricePerLead(pricingStore.currency, customLeads.value)
+  return customLeads.value * perLead
 })
+
+const activePlans = computed(() => pricingStore.currentPackages)
+const minPurchase = computed(() => pricingStore.isNigeria ? 1500 : 5)
 
 const navigation = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -262,11 +264,30 @@ watch(
   { immediate: true }
 )
 
-const simulatePayment = async (amount) => {
-  if (!amount || amount <= 0 || !authStore.user) return
-  await userStore.addCredits(authStore.user.id, amount)
-  showTopUp.value = false
-  customLeads.value = null
+const simulatePayment = async (leadsAmount) => {
+  if (!leadsAmount || leadsAmount <= 0 || !authStore.user) return
+
+  const price = leadsAmount === customLeads.value 
+    ? customPrice.value 
+    : activePlans.value.find(p => p.leads === leadsAmount)?.price
+
+  if (pricingStore.paymentProvider === 'Paystack') {
+    initializePaystack({
+      email: authStore.user.email,
+      amount: price,
+      leads: leadsAmount,
+      userId: authStore.user.id,
+      onSuccess: () => {
+        showTopUp.value = false
+        customLeads.value = null
+      }
+    })
+  } else {
+    // Fallback simulation for Stripe
+    await userStore.addCredits(authStore.user.id, leadsAmount)
+    showTopUp.value = false
+    customLeads.value = null
+  }
 }
 
 const appRouter = useRouter()

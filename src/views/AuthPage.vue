@@ -53,7 +53,7 @@
 
       <div class="w-full max-w-md">
         <div class="mb-10 text-center lg:text-left">
-          <h1 class="text-3xl font-bold mb-2 text-zinc-900 dark:text-white">
+          <h1 class="text-2xl md:text-3xl font-bold mb-2 text-zinc-900 dark:text-white">
             {{ isForgotPassword ? 'Reset password' : (isLogin ? 'Welcome back' : 'Create an account') }}
           </h1>
           <p class="text-zinc-500 dark:text-zinc-400">
@@ -290,7 +290,7 @@ const handleAuth = async () => {
       router.push('/dashboard')
     } else {
       // Sign Up
-      const data = await authStore.signUp(form.email, form.password)
+      const data = await authStore.signUp(form.name,form.email, form.password)
       
       // Check if Supabase requires email confirmation
       if (data?.user?.identities?.length === 0) {

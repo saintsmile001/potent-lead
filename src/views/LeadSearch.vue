@@ -1,7 +1,7 @@
 <template>
-  <div class="p-8 max-w-4xl mx-auto w-full transition-colors duration-300">
-    <h1 class="text-4xl font-black mb-2 text-zinc-900 dark:text-white">Lead Search Console</h1>
-    <p class="text-zinc-500 dark:text-zinc-400 mb-10">Configure your parameters to initiate a deep data extraction.</p>
+  <div class="p-4 md:p-8 max-w-4xl mx-auto w-full transition-colors duration-300">
+    <h1 class="text-3xl md:text-4xl font-black mb-2 text-zinc-900 dark:text-white">Lead Search Console</h1>
+    <p class="text-sm md:text-base text-zinc-500 dark:text-zinc-400 mb-10">Configure your parameters to initiate a deep data extraction.</p>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       
@@ -67,7 +67,7 @@
       </div>
 
       <!-- Terminal -->
-      <div class="bg-zinc-900 dark:bg-black border border-zinc-800 rounded-3xl p-6 font-mono text-sm relative overflow-hidden flex flex-col h-[450px] shadow-lg">
+      <div class="bg-zinc-900 dark:bg-black border border-zinc-800 rounded-3xl p-4 md:p-6 font-mono text-sm relative overflow-hidden flex flex-col h-[300px] md:h-[450px] shadow-lg">
         <div class="flex items-center justify-between mb-4 pb-4 border-b border-zinc-800/50">
           <div class="flex gap-2">
             <div class="w-3 h-3 rounded-full bg-red-500"></div>
@@ -136,6 +136,7 @@ const addLine = async (text, color = 'text-zinc-300 dark:text-zinc-400') => {
   await nextTick()
   const terminal = document.getElementById('terminal-output')
   if (terminal) terminal.scrollTop = terminal.scrollHeight
+  await sleep(150) // "Typewriter" effect
 }
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
@@ -160,6 +161,18 @@ const startSearch = async () => {
   
   await addLine('INITIALIZING SEARCH PROTOCOL...', 'text-electric-blue font-bold')
   await sleep(600)
+  
+  // 1. Try to deduct credits first (Atomic check)
+  await addLine('Verifying and securely deducting credits...', 'text-zinc-500')
+  const success = await userStore.useCredits(userId, searchParams.volume)
+  
+  if (!success) {
+    await addLine(`[ERROR] Deduction failed. Insufficient credits.`, 'text-red-500 font-bold')
+    isSearching.value = false
+    return
+  }
+  await addLine(`[OK] ${searchParams.volume} credits deducted.`, 'text-green-400 dark:text-cyber-lime')
+  await sleep(400)
   await addLine(`Target Niches: [${extractedNiches.join(', ').toUpperCase()}]`)
   await addLine(`Target Location: [${locationInput.value.toUpperCase()}]`)
   await addLine(`Volume Requested: ${searchParams.volume} Leads`)
@@ -198,51 +211,23 @@ const startSearch = async () => {
   } catch (err) {
     await addLine('[ERROR] Connection to Lead Engine failed!', 'text-red-500 font-bold')
     if (activityId) await leadStore.failSearchActivity(activityId)
+    
+    // THE REFUND
+    await addLine('Rolling back credit deduction...', 'text-yellow-400')
+    await userStore.refundCredits(userId, searchParams.volume)
+    await addLine('[OK] Credits restored to your balance.', 'text-zinc-400')
+    
     isSearching.value = false
     return
   }
 
-  // Deduct credits via Supabase RPC
-  await addLine('Deducting credits from balance...', 'text-red-400')
-  const deducted = await userStore.useCredits(userId, searchParams.volume)
-  if (deducted) {
-    await addLine(`[OK] ${searchParams.volume} credits deducted. Balance: ${userStore.creditBalance}`, 'text-green-400 dark:text-cyber-lime')
-  } else {
-    await addLine('[WARN] Credit deduction failed on server.', 'text-yellow-400')
-  }
-
+  // Real-time subscription instead of polling
   await sleep(1000)
-  await addLine('Connecting to Master Vault...', 'text-zinc-500')
-  await sleep(1500)
-
-  const vaultFound = Math.floor(searchParams.volume * 0.4)
-  const remaining = searchParams.volume - vaultFound
-  await addLine(`[SUCCESS] Found ${vaultFound} matching records in Vault.`, 'text-green-400 dark:text-cyber-lime')
+  await addLine('Establishing real-time connection to Master Vault...', 'text-yellow-400')
+  await leadStore.subscribeToBatchLeads(batchId)
   await sleep(800)
-
-  if (remaining > 0) {
-    await addLine(`Shortfall detected: ${remaining} leads.`)
-    await sleep(500)
-    await addLine('Live Deep Search engines are extracting data in the background...', 'text-yellow-400')
-    await sleep(2000)
-    await addLine(`Scraping across categories: ${extractedNiches.join(', ')}...`)
-    await sleep(1500)
-    await addLine('Raw data is being pushed to SMTP verifiers via n8n pipeline.', 'text-electric-blue')
-  }
-
-  // Poll for leads from Supabase
-  await sleep(1000)
-  await addLine('Polling for incoming lead data...', 'text-yellow-400')
-  const foundCount = await leadStore.pollForLeads(batchId, 10, 3000)
-
-  if (foundCount > 0) {
-    await addLine(`[SUCCESS] ${foundCount} leads received and stored!`, 'text-green-400 dark:text-cyber-lime font-bold')
-    if (activityId) await leadStore.completeSearchActivity(activityId, foundCount)
-  } else {
-    await addLine('[INFO] Leads are still compiling in the background.', 'text-yellow-400')
-    await addLine('Check the Master Vault shortly — results will appear as they arrive.', 'text-zinc-500')
-    if (activityId) await leadStore.completeSearchActivity(activityId, 0)
-  }
+  await addLine('[SUCCESS] Subscribed to live lead stream.', 'text-green-400 dark:text-cyber-lime font-bold')
+  await addLine('[INFO] Leads will populate in the Vault as they arrive from n8n.', 'text-zinc-500')
 
   await addLine('=========================================')
   await addLine('PROCESS COMPLETE. Check your Master Vault for results.', 'text-green-400 dark:text-cyber-lime font-bold')

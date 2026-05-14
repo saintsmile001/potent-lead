@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { supabase } from '../supabase'
+import { usePricingStore } from './pricing'
 
 export const useLeadStore = defineStore('leads', {
   state: () => ({
@@ -15,7 +16,27 @@ export const useLeadStore = defineStore('leads', {
     leadCount: (state) => state.leads.length,
     freshLeads: (state) => state.leads.filter(l => l.status === 'Fresh'),
     vaultLeads: (state) => state.leads.filter(l => l.status === 'Vault'),
-    pendingSearches: (state) => state.searchHistory.filter(s => s.status === 'pending' || s.status === 'processing')
+    pendingSearches: (state) => state.searchHistory.filter(s => s.status === 'pending' || s.status === 'processing'),
+    
+    // Tells the user how much their "Vault" is worth based on currency
+    vaultEstimatedValue: (state) => {
+      const pricingStore = usePricingStore()
+      const isNGN = pricingStore.currency === 'NGN'
+      const pricePerLead = isNGN ? 50 : 0.18 // Base valuation
+      const total = state.leads.length * pricePerLead
+      
+      return new Intl.NumberFormat(isNGN ? 'en-NG' : 'en-US', {
+        style: 'currency',
+        currency: pricingStore.currency
+      }).format(total)
+    },
+    
+    // Progress percentage for the UI
+    searchProgress: (state) => {
+      const active = state.searchHistory.find(s => s.status === 'processing')
+      if (!active || !active.leads_requested) return 0
+      return Math.min(100, Math.round((state.leads.length / active.leads_requested) * 100))
+    }
   },
 
   actions: {
@@ -28,6 +49,7 @@ export const useLeadStore = defineStore('leads', {
           .from('leads')
           .select('*')
           .order('created_at', { ascending: false })
+          .limit(100)
 
         if (error) throw error
         this.leads = data || []
@@ -124,27 +146,29 @@ export const useLeadStore = defineStore('leads', {
       }
     },
 
-    // Poll for new leads matching a batch_id (called after n8n webhook)
-    async pollForLeads(batchId, maxAttempts = 20, intervalMs = 3000) {
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const { data, error } = await supabase
-          .from('leads')
-          .select('*', { count: 'exact' })
-          .eq('batch_id', batchId)
+    // Listen for new leads matching a batch_id via Postgres Changes
+    async subscribeToBatchLeads(batchId) {
+      if (!batchId) return
 
-        if (!error && data && data.length > 0) {
-          // New leads found — merge into local state
-          const existingIds = new Set(this.leads.map(l => l.id))
-          const newLeads = data.filter(l => !existingIds.has(l.id))
-          this.leads.unshift(...newLeads)
-          return data.length
-        }
-
-        // Wait before next poll
-        await new Promise(resolve => setTimeout(resolve, intervalMs))
-      }
-
-      return 0 // No leads found after all attempts
+      return supabase
+        .channel(`batch-${batchId}`)
+        .on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'leads', 
+            filter: `batch_id=eq.${batchId}` 
+          },
+          (payload) => {
+            console.log('New lead received in real-time!', payload.new)
+            // Add lead to UI instantly, prevent duplicates
+            if (!this.leads.find(l => l.id === payload.new.id)) {
+              this.leads.unshift(payload.new)
+            }
+          }
+        )
+        .subscribe()
     },
 
     // Clear current search results (for UI reset)

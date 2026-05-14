@@ -1,7 +1,7 @@
 <template>
-  <div class="p-8 max-w-4xl mx-auto w-full h-full transition-colors duration-300">
-    <h1 class="text-4xl font-black mb-2 text-zinc-900 dark:text-white">My Downloads</h1>
-    <p class="text-zinc-500 dark:text-zinc-400 mb-10">Access your previously exported lead lists.</p>
+  <div class="p-4 md:p-8 max-w-4xl mx-auto w-full h-full transition-colors duration-300">
+    <h1 class="text-3xl md:text-4xl font-black mb-2 text-zinc-900 dark:text-white">My Downloads</h1>
+    <p class="text-sm md:text-base text-zinc-500 dark:text-zinc-400 mb-10">Access your previously exported lead lists.</p>
 
     <!-- Loading -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
@@ -49,24 +49,25 @@
         Recent Search Activity
       </h2>
       <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
-        <table class="w-full text-sm text-left">
-          <thead class="text-xs uppercase bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500 border-b border-zinc-200 dark:border-zinc-800/50">
-            <tr>
-              <th class="px-6 py-3 font-bold tracking-widest">Query</th>
-              <th class="px-6 py-3 font-bold tracking-widest">Location</th>
-              <th class="px-6 py-3 font-bold tracking-widest">Requested</th>
-              <th class="px-6 py-3 font-bold tracking-widest">Found</th>
-              <th class="px-6 py-3 font-bold tracking-widest">Status</th>
-              <th class="px-6 py-3 font-bold tracking-widest">Date</th>
-            </tr>
-          </thead>
+        <div class="overflow-x-auto hide-scrollbar">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs uppercase bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500 border-b border-zinc-200 dark:border-zinc-800/50 whitespace-nowrap">
+              <tr>
+                <th class="px-4 md:px-6 py-3 font-bold tracking-widest">Query</th>
+                <th class="px-4 md:px-6 py-3 font-bold tracking-widest">Location</th>
+                <th class="px-4 md:px-6 py-3 font-bold tracking-widest">Requested</th>
+                <th class="px-4 md:px-6 py-3 font-bold tracking-widest">Found</th>
+                <th class="px-4 md:px-6 py-3 font-bold tracking-widest">Status</th>
+                <th class="px-4 md:px-6 py-3 font-bold tracking-widest">Date</th>
+              </tr>
+            </thead>
           <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-            <tr v-for="a in activity" :key="a.id" class="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-              <td class="px-6 py-4 font-medium text-zinc-900 dark:text-white">{{ a.search_query }}</td>
-              <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ a.search_location || '—' }}</td>
-              <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ a.leads_requested }}</td>
-              <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ a.leads_found || '—' }}</td>
-              <td class="px-6 py-4">
+            <tr v-for="a in activity" :key="a.id" class="hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors whitespace-nowrap">
+              <td class="px-4 md:px-6 py-4 font-medium text-zinc-900 dark:text-white">{{ a.search_query }}</td>
+              <td class="px-4 md:px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ a.search_location || '—' }}</td>
+              <td class="px-4 md:px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ a.leads_requested }}</td>
+              <td class="px-4 md:px-6 py-4 text-zinc-600 dark:text-zinc-400">{{ a.leads_found || '—' }}</td>
+              <td class="px-4 md:px-6 py-4">
                 <span class="px-2 py-1 text-xs font-bold rounded-full"
                   :class="{
                     'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400': a.status === 'completed',
@@ -76,10 +77,11 @@
                   {{ a.status }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-zinc-500 text-xs">{{ formatDate(a.created_at) }}</td>
+              <td class="px-4 md:px-6 py-4 text-zinc-500 text-xs">{{ formatDate(a.created_at) }}</td>
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>

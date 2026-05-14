@@ -10,7 +10,9 @@ create table if not exists profiles (
   full_name text,
   role text default 'user',
   credit_balance integer default 0,
-  subscription_tier text default 'free',
+  subscription_tier text default 'free_tier',
+  currency text default 'NGN',
+  region text default 'NG/Nigeria',
   ip_address text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now())
@@ -45,12 +47,14 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   begin
-    insert into public.profiles (id, email, full_name, credit_balance)
+    insert into public.profiles (id, email, full_name, credit_balance, currency, subscription_tier)
     values (
       new.id,
       new.email,
       coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-      100  -- Give new users 100 free starter credits
+      20,       -- 20 free starter credits for new users
+      'NGN',    -- Default to Nigerian Naira
+      'free_tier'
     );
   exception when others then
     -- Log the error but never block the signup
@@ -214,3 +218,14 @@ begin
   where id = auth.uid();
 end;
 $$ language plpgsql security definer;
+
+-- 8. SECURE CREDIT INCREMENT (WEBHOOK HANDLER)
+-- Safely increments user credits. Called by n8n after verifying Paystack webhook signature.
+CREATE OR REPLACE FUNCTION add_credits_securely(target_user_id UUID, credit_amount INT)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE profiles
+  SET credit_balance = credit_balance + credit_amount
+  WHERE id = target_user_id;
+END;
+$$ LANGUAGE plpgsql;
