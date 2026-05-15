@@ -78,33 +78,65 @@ export const useLeadStore = defineStore('leads', {
     },
 
     // Create a new activity entry when a search starts
+    // async createSearchActivity(userId, query, location, volume) {
+    //   const batchId = crypto.randomUUID()
+    //   this.currentBatchId = batchId
+
+    //   try {
+    //     const { data, error } = await supabase
+    //       .from('activity')
+    //       .insert({
+    //         user_id: userId,
+    //         search_query: query,
+    //         search_location: location,
+    //         leads_requested: volume,
+    //         cost_in_credits: volume,
+    //         batch_id: batchId,
+    //         status: 'processing'
+    //       })
+    //       .select()
+    //       .single()
+
+    //     if (error) throw error
+    //     this.searchHistory.unshift(data)
+    //     return { batchId, activityId: data.id }
+    //   } catch (err) {
+    //     console.error('Failed to create search activity:', err)
+    //     throw err
+    //   }
+    // },
+
     async createSearchActivity(userId, query, location, volume) {
-      const batchId = crypto.randomUUID()
-      this.currentBatchId = batchId
+  const batchId = crypto.randomUUID()
+  this.currentBatchId = batchId
 
-      try {
-        const { data, error } = await supabase
-          .from('activity')
-          .insert({
-            user_id: userId,
-            search_query: query,
-            search_location: location,
-            leads_requested: volume,
-            cost_in_credits: volume,
-            batch_id: batchId,
-            status: 'processing'
-          })
-          .select()
-          .single()
+  try {
+    const { data, error } = await supabase
+      .from('activity')
+      .insert({
+        user_id: userId,
+        search_query: query,
+        search_location: location,
+        leads_requested: volume,
+        cost_in_credits: volume,
+        batch_id: batchId,
+        status: 'processing' // Starts processing immediately
+      })
+      .select()
+      .single()
 
-        if (error) throw error
-        this.searchHistory.unshift(data)
-        return { batchId, activityId: data.id }
-      } catch (err) {
-        console.error('Failed to create search activity:', err)
-        throw err
-      }
-    },
+    if (error) throw error
+    
+    if (this.searchHistory) {
+      this.searchHistory.unshift(data)
+    }
+    
+    return { batchId, activityId: data.id }
+  } catch (err) {
+    console.error('Failed to create search activity in database:', err)
+    return null
+  }
+},
 
     // Mark activity as completed after n8n returns
     async completeSearchActivity(activityId, leadsFound) {

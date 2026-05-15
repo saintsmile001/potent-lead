@@ -44,7 +44,7 @@
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Lead Volume Needed</label>
             <div class="flex items-center gap-4">
-              <input v-model="searchParams.volume" type="range" min="50" max="5000" step="50"
+              <input v-model="searchParams.volume" type="range" min="5" max="5000" step="5"
                 class="flex-1 h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer custom-slider" />
               <div class="w-20 px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-center font-mono font-bold text-electric-blue dark:text-cyber-lime">
                 {{ searchParams.volume }}
@@ -150,6 +150,7 @@ const startSearch = async () => {
     return
   }
 
+  // Local UI-guard check (Instant warning before sending network request)
   if (userStore.creditBalance < searchParams.volume) {
     terminalLines.value = [{ text: `[ERROR] INSUFFICIENT CREDITS. Need ${searchParams.volume}, have ${userStore.creditBalance}.`, color: 'text-red-500 font-bold' }]
     return
@@ -162,61 +163,68 @@ const startSearch = async () => {
   await addLine('INITIALIZING SEARCH PROTOCOL...', 'text-electric-blue font-bold')
   await sleep(600)
   
-  // 1. Try to deduct credits first (Atomic check)
-  await addLine('Verifying and securely deducting credits...', 'text-zinc-500')
-  const success = await userStore.useCredits(userId, searchParams.volume)
-  
-  if (!success) {
-    await addLine(`[ERROR] Deduction failed. Insufficient credits.`, 'text-red-500 font-bold')
-    isSearching.value = false
-    return
-  }
-  await addLine(`[OK] ${searchParams.volume} credits deducted.`, 'text-green-400 dark:text-cyber-lime')
-  await sleep(400)
   await addLine(`Target Niches: [${extractedNiches.join(', ').toUpperCase()}]`)
   await addLine(`Target Location: [${locationInput.value.toUpperCase()}]`)
   await addLine(`Volume Requested: ${searchParams.volume} Leads`)
-  await sleep(800)
+  await sleep(400)
 
+ 
   // Create activity record in Supabase
-  let activityId = null
-  let batchId = null
+
+  let activityId = null;
+  let batchId = crypto.randomUUID(); // Fallback ID ready to go
+  
   try {
-    await addLine('Registering search in activity log...', 'text-zinc-500')
-    const result = await leadStore.createSearchActivity(userId, extractedNiches.join(', '), locationInput.value, searchParams.volume)
-    activityId = result.activityId
-    batchId = result.batchId
-    await addLine('[OK] Activity logged.', 'text-green-400 dark:text-cyber-lime')
+    await addLine('Registering search in activity log...', 'text-zinc-500');
+    
+    const result = await leadStore.createSearchActivity(
+      userId, 
+      extractedNiches.join(', '), 
+      locationInput.value, 
+      searchParams.volume
+    );
+    
+    if (result && result.activityId) {
+      activityId = result.activityId;
+      batchId = result.batchId || batchId;
+      await addLine('[OK] Activity logged.', 'text-green-400 dark:text-cyber-lime');
+    }
   } catch (err) {
-    await addLine('[WARN] Activity log failed, continuing search...', 'text-yellow-400')
-    batchId = crypto.randomUUID()
+    console.error("Activity Logging Failed:", err);
+    await addLine('[WARN] Activity log bypass active. Proceeding...', 'text-yellow-400');
   }
 
-  await sleep(500)
-  await addLine('Transmitting parameters to remote n8n worker...', 'text-yellow-400')
-
-  const payload = {
-    category: extractedNiches.join(', '),
-    location: locationInput.value,
-    email: userStore.user?.email || 'user@potent-lead.com',
-    count: searchParams.volume,
-    userId,
-    batchId
-  }
+  // Code safely continues to your n8n logic block!
+  await sleep(500);
+  await addLine('Transmitting parameters to remote n8n worker...', 'text-yellow-400');
 
   try {
-    await triggerLeadGeneration(payload)
+    const payload = {
+      category: extractedNiches.join(', '),
+      location: locationInput.value,
+      email: authStore.user?.email || 'user@potent-lead.com',
+      count: searchParams.volume,
+      userId,
+      batchId
+    };
+
+    // 2. n8n now intercepts the request, runs the formal check, executes, and deducts!
+    const result = await triggerLeadGeneration(payload)
+    
+    // Check if n8n rejected the execution during its database check phase
+    if (result && result.status === 'error') {
+      await addLine(`[SERVER ERROR] ${result.message.toUpperCase()}`, 'text-red-500 font-bold')
+      if (activityId) await leadStore.failSearchActivity(activityId)
+      isSearching.value = false
+      return
+    }
+
     await sleep(800)
-    await addLine('[OK] n8n Webhook Acknowledged. Scrape initiated!', 'text-green-400 dark:text-cyber-lime')
+    await addLine('[OK] Lead Engine verified balance. Extraction running...', 'text-green-400 dark:text-cyber-lime')
+    
   } catch (err) {
-    await addLine('[ERROR] Connection to Lead Engine failed!', 'text-red-500 font-bold')
+    await addLine('[ERROR] Connection to Lead Engine failed entirely!', 'text-red-500 font-bold')
     if (activityId) await leadStore.failSearchActivity(activityId)
-    
-    // THE REFUND
-    await addLine('Rolling back credit deduction...', 'text-yellow-400')
-    await userStore.refundCredits(userId, searchParams.volume)
-    await addLine('[OK] Credits restored to your balance.', 'text-zinc-400')
-    
     isSearching.value = false
     return
   }
@@ -225,12 +233,13 @@ const startSearch = async () => {
   await sleep(1000)
   await addLine('Establishing real-time connection to Master Vault...', 'text-yellow-400')
   await leadStore.subscribeToBatchLeads(batchId)
+  
   await sleep(800)
   await addLine('[SUCCESS] Subscribed to live lead stream.', 'text-green-400 dark:text-cyber-lime font-bold')
-  await addLine('[INFO] Leads will populate in the Vault as they arrive from n8n.', 'text-zinc-500')
+  await addLine('[INFO] n8n will safely deduct credits when tasks finish successfully.', 'text-zinc-500')
 
   await addLine('=========================================')
-  await addLine('PROCESS COMPLETE. Check your Master Vault for results.', 'text-green-400 dark:text-cyber-lime font-bold')
+  await addLine('PROCESS COMPLETE. Tracking live stream output.', 'text-green-400 dark:text-cyber-lime font-bold')
   isSearching.value = false
 }
 </script>
