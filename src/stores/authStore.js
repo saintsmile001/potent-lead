@@ -16,14 +16,14 @@ export const useAuthStore = defineStore("auth", {
         data: { session },
       } = await supabase.auth.getSession();
 
-      
       this.session = session;
       this.user = session?.user || null;
 
       if (this.user) {
         await this.syncProfile();
         await this.fetchRole();
-        await this.trackUserIp();
+        await this.trackUserIp(); // Explicitly tracks client IP now
+
         // Hydrate the user store from Supabase
         const userStore = useUserStore();
         await userStore.fetchProfile(this.user.id);
@@ -41,7 +41,8 @@ export const useAuthStore = defineStore("auth", {
           // Sync Google OAuth signups to local profiles table
           await this.syncProfile();
           await this.fetchRole();
-          await this.trackUserIp();
+          await this.trackUserIp(); // Catches the user redirecting back from email verification links
+
           // Refresh credits/profile from Supabase
           const userStore = useUserStore();
           await userStore.fetchProfile(this.user.id);
@@ -74,11 +75,20 @@ export const useAuthStore = defineStore("auth", {
 
     async trackUserIp() {
       try {
-        // Server-side IP capture via Supabase's x-real-ip header — unforgeable
-        await supabase.rpc("capture_user_ip");
+        // 1. Fetch the absolute public IP on the client-side browser context
+        const ipRes = await fetch("https://api.ipify.org?format=json");
+        const { ip } = await ipRes.json();
+
+        // 2. Pass it into your updated PostgreSQL RPC parameter explicitly
+        const { error } = await supabase.rpc("capture_user_ip", {
+          user_ip: ip,
+        });
+
+        if (error) throw error;
+        console.log(`[Auth Store] IP Address (${ip}) logged successfully.`);
       } catch (err) {
         // Non-critical — don't block login if IP capture fails
-        console.warn("IP tracking skipped:", err.message);
+        console.warn("IP tracking skipped or failed:", err.message);
       }
     },
 
@@ -107,7 +117,7 @@ export const useAuthStore = defineStore("auth", {
         options: {
           data: {
             full_name: name,
-            signup_ip: ip
+            signup_ip: ip,
           },
         },
       });
