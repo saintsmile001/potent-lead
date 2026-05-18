@@ -16,7 +16,7 @@
             <label class="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Target Niches / Categories</label>
             <input v-model="searchParams.niches" type="text" placeholder="e.g., Software, Real Estate, Dentists"
               class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-zinc-200 focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-all" required />
-            <p class="text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 font-medium uppercase tracking-wider">Use a <strong class="text-zinc-600 dark:text-zinc-400">Comma</strong> to separate multiple entries.</p>
+            <!-- <p class="text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 font-medium uppercase tracking-wider">Use a <strong class="text-zinc-600 dark:text-zinc-400">Comma</strong> to separate multiple entries.</p> -->
           </div>
 
           <!-- Location Autocomplete -->
@@ -98,7 +98,7 @@ const userStore = useUserStore()
 const leadStore = useLeadStore()
 const authStore = useAuthStore()
 
-const searchParams = reactive({ niches: '', volume: 500 })
+const searchParams = reactive({ niches: '', volume: 10 })
 const locationInput = ref('')
 const showAutocomplete = ref(false)
 const apiCities = ref([])

@@ -43,7 +43,7 @@
     </div>
 
     <!-- Recent Activity Section -->
-    <div v-if="activity.length > 0" class="mt-12">
+    <div v-if="activity.length > 0" class="mt-12 py-8">
       <h2 class="text-2xl font-bold mb-6 text-zinc-900 dark:text-white flex items-center gap-2">
         <Activity class="w-6 h-6 text-electric-blue" />
         Recent Search Activity
